@@ -1,0 +1,109 @@
+
+
+-- SERVICES
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- VARIABLES
+local ESPEnabled = false
+local Drawings = {}
+
+-- FUNCTION TO CREATE UI
+local function createUI()
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "ESP_UI"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.Parent = game.CoreGui
+
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(0, 200, 0, 50)
+    Frame.Position = UDim2.new(0, 100, 0, 100)
+    Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    Frame.BorderSizePixel = 0
+    Frame.Active = true
+    Frame.Draggable = true
+    Frame.Parent = ScreenGui
+
+    local ToggleButton = Instance.new("TextButton")
+    ToggleButton.Size = UDim2.new(1, 0, 1, 0)
+    ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    ToggleButton.BorderSizePixel = 0
+    ToggleButton.Text = "Toggle ESP (OFF)"
+    ToggleButton.TextColor3 = Color3.new(1, 1, 1)
+    ToggleButton.Font = Enum.Font.SourceSansBold
+    ToggleButton.TextSize = 18
+    ToggleButton.Parent = Frame
+
+    ToggleButton.MouseButton1Click:Connect(function()
+        ESPEnabled = not ESPEnabled
+        ToggleButton.Text = ESPEnabled and "Toggle ESP (ON)" or "Toggle ESP (OFF)"
+        if not ESPEnabled then
+            for _, v in ipairs(Drawings) do
+                if v and v.username then
+                    v.username:Remove()
+                end
+                if v and v.hp then
+                    v.hp:Remove()
+                end
+            end
+            Drawings = {}
+        end
+    end)
+end
+
+-- FUNCTION TO CREATE ESP FOR A PLAYER
+local function createESP(player)
+    local usernameESP = Drawing.new("Text")
+    usernameESP.Visible = false
+    usernameESP.Center = true
+    usernameESP.Outline = true
+    usernameESP.Font = 2
+    usernameESP.Size = 13
+    usernameESP.Color = Color3.fromRGB(0, 255, 0) -- Green for usernames
+
+    local hpESP = Drawing.new("Text")
+    hpESP.Visible = false
+    hpESP.Center = true
+    hpESP.Outline = true
+    hpESP.Font = 2
+    hpESP.Size = 12
+    hpESP.Color = Color3.fromRGB(255, 0, 0) -- Red for HP
+
+    table.insert(Drawings, {username = usernameESP, hp = hpESP})
+
+    RunService.RenderStepped:Connect(function()
+        if ESPEnabled and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChildOfClass("Humanoid") then
+            local humanoidRootPart = player.Character.HumanoidRootPart
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+
+            local rootPos = workspace.CurrentCamera:WorldToViewportPoint(humanoidRootPart.Position)
+
+            usernameESP.Position = Vector2.new(rootPos.X, rootPos.Y - 15)
+            usernameESP.Text = player.Name
+            usernameESP.Visible = true
+
+            hpESP.Position = Vector2.new(rootPos.X, rootPos.Y)
+            hpESP.Text = "HP: " .. math.floor(humanoid.Health)
+            hpESP.Visible = true
+        else
+            usernameESP.Visible = false
+            hpESP.Visible = false
+        end
+    end)
+end
+
+-- MAIN
+createUI()
+
+for _, player in ipairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer then
+        createESP(player)
+    end
+end
+
+Players.PlayerAdded:Connect(function(player)
+    if player ~= LocalPlayer then
+        createESP(player)
+    end
+end)
