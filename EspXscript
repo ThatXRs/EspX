@@ -1,20 +1,18 @@
+-- FIXED ESP SCRIPT: Shows Username + HP, Through Walls, Draggable UI, Toggleable
 
-
--- SERVICES
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
--- VARIABLES
 local ESPEnabled = false
 local Drawings = {}
 
--- FUNCTION TO CREATE UI
+-- Create UI
 local function createUI()
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "ESP_UI"
     ScreenGui.ResetOnSpawn = false
-    ScreenGui.Parent = game.CoreGui
+    ScreenGui.Parent = game:GetService("CoreGui")
 
     local Frame = Instance.new("Frame")
     Frame.Size = UDim2.new(0, 200, 0, 50)
@@ -40,27 +38,27 @@ local function createUI()
         ToggleButton.Text = ESPEnabled and "Toggle ESP (ON)" or "Toggle ESP (OFF)"
         if not ESPEnabled then
             for _, v in ipairs(Drawings) do
-                if v and v.username then
-                    v.username:Remove()
-                end
-                if v and v.hp then
-                    v.hp:Remove()
-                end
+                if v.username then v.username:Remove() end
+                if v.hp then v.hp:Remove() end
             end
             Drawings = {}
         end
     end)
 end
 
--- FUNCTION TO CREATE ESP FOR A PLAYER
+-- Create ESP Drawing for one player
 local function createESP(player)
+    if not player.Character then
+        player.CharacterAdded:Wait()
+    end
+
     local usernameESP = Drawing.new("Text")
     usernameESP.Visible = false
     usernameESP.Center = true
     usernameESP.Outline = true
     usernameESP.Font = 2
     usernameESP.Size = 13
-    usernameESP.Color = Color3.fromRGB(0, 255, 0) -- Green for usernames
+    usernameESP.Color = Color3.fromRGB(0, 255, 0)
 
     local hpESP = Drawing.new("Text")
     hpESP.Visible = false
@@ -68,24 +66,33 @@ local function createESP(player)
     hpESP.Outline = true
     hpESP.Font = 2
     hpESP.Size = 12
-    hpESP.Color = Color3.fromRGB(255, 0, 0) -- Red for HP
+    hpESP.Color = Color3.fromRGB(255, 0, 0)
 
     table.insert(Drawings, {username = usernameESP, hp = hpESP})
 
     RunService.RenderStepped:Connect(function()
-        if ESPEnabled and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChildOfClass("Humanoid") then
-            local humanoidRootPart = player.Character.HumanoidRootPart
+        if ESPEnabled and player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChildOfClass("Humanoid") then
+            local humanoidRoot = player.Character.HumanoidRootPart
             local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            local vector, onScreen = workspace.CurrentCamera:WorldToViewportPoint(humanoidRoot.Position)
 
-            local rootPos = workspace.CurrentCamera:WorldToViewportPoint(humanoidRootPart.Position)
+            if humanoid.Health > 0 then
+                if onScreen then
+                    usernameESP.Position = Vector2.new(vector.X, vector.Y - 15)
+                    usernameESP.Text = player.Name
+                    usernameESP.Visible = true
 
-            usernameESP.Position = Vector2.new(rootPos.X, rootPos.Y - 15)
-            usernameESP.Text = player.Name
-            usernameESP.Visible = true
-
-            hpESP.Position = Vector2.new(rootPos.X, rootPos.Y)
-            hpESP.Text = "HP: " .. math.floor(humanoid.Health)
-            hpESP.Visible = true
+                    hpESP.Position = Vector2.new(vector.X, vector.Y)
+                    hpESP.Text = "HP: " .. math.floor(humanoid.Health)
+                    hpESP.Visible = true
+                else
+                    usernameESP.Visible = false
+                    hpESP.Visible = false
+                end
+            else
+                usernameESP.Visible = false
+                hpESP.Visible = false
+            end
         else
             usernameESP.Visible = false
             hpESP.Visible = false
@@ -107,3 +114,4 @@ Players.PlayerAdded:Connect(function(player)
         createESP(player)
     end
 end)
+
